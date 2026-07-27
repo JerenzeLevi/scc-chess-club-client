@@ -33,30 +33,23 @@ export default async function LoginPage({
             Welcome back to the SCC Chess Club.
           </CardDescription>
         </CardHeader>
+        {error && (
+          <CardContent className="pt-0">
+            <Alert variant="destructive">
+              <AlertDescription>{error}</AlertDescription>
+            </Alert>
+            {unconfirmedEmail && (
+              <form action={resendConfirmation} className="mt-2">
+                <input type="hidden" name="email" value={unconfirmedEmail} />
+                <button type="submit" className="text-foreground text-sm underline">
+                  Resend confirmation email
+                </button>
+              </form>
+            )}
+          </CardContent>
+        )}
         <form action={signIn}>
           <CardContent className="space-y-4">
-            {error && (
-              <Alert variant="destructive">
-                <AlertDescription>
-                  {error}
-                  {unconfirmedEmail && (
-                    <form action={resendConfirmation} className="mt-2">
-                      <input
-                        type="hidden"
-                        name="email"
-                        value={unconfirmedEmail}
-                      />
-                      <button
-                        type="submit"
-                        className="text-foreground underline"
-                      >
-                        Resend confirmation email
-                      </button>
-                    </form>
-                  )}
-                </AlertDescription>
-              </Alert>
-            )}
             {resent && (
               <Alert>
                 <AlertDescription>
