@@ -4,6 +4,7 @@ import { getCurrentProfile } from "@/lib/auth";
 import { getOfficers } from "@/lib/sheets/data";
 import { addOfficer, updateOfficer, removeOfficer } from "@/app/actions/officers";
 import { Button } from "@/components/ui/button";
+import { SubmitButton } from "@/components/submit-button";
 import {
   Card,
   CardContent,
@@ -100,16 +101,16 @@ export default async function AdminOfficersPage({
                 </div>
               </CardContent>
               <CardContent className="flex justify-end gap-2 pt-0">
-                <Button type="submit" size="sm">
+                <SubmitButton size="sm" pendingText="Saving…">
                   Save
-                </Button>
+                </SubmitButton>
               </CardContent>
             </form>
             <form action={removeOfficer.bind(null, officer.id)}>
               <CardContent className="flex justify-end pt-0">
-                <Button type="submit" size="sm" variant="destructive">
+                <SubmitButton size="sm" variant="destructive" pendingText="Removing…">
                   Remove position
-                </Button>
+                </SubmitButton>
               </CardContent>
             </form>
           </Card>
@@ -135,7 +136,7 @@ export default async function AdminOfficersPage({
                 required
               />
             </div>
-            <Button type="submit">Add</Button>
+            <SubmitButton pendingText="Adding…">Add</SubmitButton>
           </CardContent>
         </form>
       </Card>

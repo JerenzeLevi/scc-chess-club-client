@@ -4,6 +4,7 @@ import { getCurrentProfile } from "@/lib/auth";
 import { getEvents } from "@/lib/sheets/data";
 import { createEvent } from "@/app/actions/tournaments";
 import { Button } from "@/components/ui/button";
+import { SubmitButton } from "@/components/submit-button";
 import {
   Card,
   CardContent,
@@ -96,7 +97,7 @@ export default async function AdminPage({
             </div>
           </CardContent>
           <CardContent className="pt-0">
-            <Button type="submit">Create event</Button>
+            <SubmitButton pendingText="Creating…">Create event</SubmitButton>
           </CardContent>
         </form>
       </Card>

@@ -4,6 +4,7 @@ import { getCurrentProfile } from "@/lib/auth";
 import { getAdmins } from "@/lib/sheets/data";
 import { addAdmin, removeAdmin } from "@/app/actions/admin-manage";
 import { Button } from "@/components/ui/button";
+import { SubmitButton } from "@/components/submit-button";
 import {
   Card,
   CardContent,
@@ -75,7 +76,7 @@ export default async function AdminAdminsPage({
                 </SelectContent>
               </Select>
             </div>
-            <Button type="submit">Add</Button>
+            <SubmitButton pendingText="Adding…">Add</SubmitButton>
           </CardContent>
         </form>
       </Card>
@@ -92,9 +93,9 @@ export default async function AdminAdminsPage({
               </div>
               {a.email !== profile.email && (
                 <form action={removeAdmin.bind(null, a.email)}>
-                  <Button type="submit" size="sm" variant="ghost">
+                  <SubmitButton size="sm" variant="ghost" pendingText="Removing…">
                     Remove
-                  </Button>
+                  </SubmitButton>
                 </form>
               )}
             </CardHeader>

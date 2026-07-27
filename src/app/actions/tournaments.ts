@@ -31,9 +31,9 @@ export async function createEvent(formData: FormData) {
   redirect(`/admin/events/${id}`);
 }
 
-export async function registerPlayer(eventId: string, playerName: string) {
+export async function registerPlayer(eventId: string, formData: FormData) {
   await requireAdmin();
-  const name = playerName.trim();
+  const name = String(formData.get("playerName") ?? "").trim();
   if (!name) return;
   await data.registerPlayer(eventId, name);
   revalidatePath(`/admin/events/${eventId}`);
@@ -42,10 +42,14 @@ export async function registerPlayer(eventId: string, playerName: string) {
 export async function registerPlayersBulk(eventId: string, formData: FormData) {
   await requireAdmin();
   const raw = String(formData.get("names") ?? "");
-  const names = raw
-    .split(/\r?\n|,/)
-    .map((n) => n.trim())
-    .filter(Boolean);
+  const names = [
+    ...new Set(
+      raw
+        .split(/\r?\n|,/)
+        .map((n) => n.trim())
+        .filter(Boolean),
+    ),
+  ];
 
   for (const name of names) {
     await data.registerPlayer(eventId, name);

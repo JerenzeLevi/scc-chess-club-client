@@ -4,6 +4,7 @@ import { getCurrentProfile } from "@/lib/auth";
 import { getAnnouncements } from "@/lib/sheets/data";
 import { addAnnouncement, removeAnnouncement } from "@/app/actions/admin-manage";
 import { Button } from "@/components/ui/button";
+import { SubmitButton } from "@/components/submit-button";
 import {
   Card,
   CardContent,
@@ -61,7 +62,7 @@ export default async function AdminAnnouncementsPage({
             </div>
           </CardContent>
           <CardContent className="pt-0">
-            <Button type="submit">Post</Button>
+            <SubmitButton pendingText="Posting…">Post</SubmitButton>
           </CardContent>
         </form>
       </Card>
@@ -75,9 +76,9 @@ export default async function AdminAnnouncementsPage({
                 <p className="text-muted-foreground mt-1 text-sm">{a.body}</p>
               </div>
               <form action={removeAnnouncement.bind(null, a.id)}>
-                <Button type="submit" size="sm" variant="ghost">
+                <SubmitButton size="sm" variant="ghost" pendingText="Removing…">
                   Remove
-                </Button>
+                </SubmitButton>
               </form>
             </CardHeader>
           </Card>

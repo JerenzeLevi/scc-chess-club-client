@@ -10,7 +10,7 @@ import {
   completeEvent,
 } from "@/app/actions/tournaments";
 import { computeStandings } from "@/lib/pairing/standings";
-import { Button } from "@/components/ui/button";
+import { SubmitButton } from "@/components/submit-button";
 import {
   Card,
   CardContent,
@@ -69,6 +69,8 @@ export default async function AdminEventPage({
     })),
   );
 
+  const canGenerateRound = event.status !== "completed" && registeredPlayers.length >= 2;
+
   return (
     <div className="mx-auto w-full max-w-4xl px-4 py-16">
       <div className="flex items-center justify-between">
@@ -102,9 +104,9 @@ export default async function AdminEventPage({
               <li key={name} className="flex items-center justify-between text-sm">
                 <span>{name}</span>
                 <form action={unregisterPlayer.bind(null, id, name)}>
-                  <Button variant="ghost" size="sm" type="submit">
+                  <SubmitButton variant="ghost" size="sm" pendingText="Removing…">
                     Remove
-                  </Button>
+                  </SubmitButton>
                 </form>
               </li>
             ))}
@@ -113,18 +115,11 @@ export default async function AdminEventPage({
             )}
           </ul>
 
-          <form
-            action={async (formData: FormData) => {
-              "use server";
-              const name = String(formData.get("playerName"));
-              await registerPlayer(id, name);
-            }}
-            className="flex items-end gap-3"
-          >
+          <form action={registerPlayer.bind(null, id)} className="flex items-end gap-3">
             <div className="flex-1 space-y-2">
               <Input name="playerName" placeholder="Player name" required />
             </div>
-            <Button type="submit">Register</Button>
+            <SubmitButton pendingText="Registering…">Register</SubmitButton>
           </form>
 
           <form action={registerPlayersBulk.bind(null, id)} className="flex flex-col gap-2 border-t pt-4">
@@ -141,9 +136,9 @@ export default async function AdminEventPage({
               className="border-input bg-transparent rounded-md border px-3 py-2 text-sm"
               placeholder={"Jane Doe\nJohn Smith"}
             />
-            <Button type="submit" variant="outline" className="w-fit">
+            <SubmitButton variant="outline" className="w-fit" pendingText="Importing…">
               Import players
-            </Button>
+            </SubmitButton>
           </form>
         </CardContent>
       </Card>
@@ -153,22 +148,28 @@ export default async function AdminEventPage({
           <CardTitle>Standings</CardTitle>
         </CardHeader>
         <CardContent>
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Player</TableHead>
-                <TableHead className="text-right">Score</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {standings.map((s) => (
-                <TableRow key={s.profileId}>
-                  <TableCell>{s.profileId}</TableCell>
-                  <TableCell className="text-right">{s.score}</TableCell>
+          {standings.length === 0 ? (
+            <p className="text-muted-foreground text-sm">
+              Register at least two players to see standings.
+            </p>
+          ) : (
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Player</TableHead>
+                  <TableHead className="text-right">Score</TableHead>
                 </TableRow>
-              ))}
-            </TableBody>
-          </Table>
+              </TableHeader>
+              <TableBody>
+                {standings.map((s) => (
+                  <TableRow key={s.profileId}>
+                    <TableCell>{s.profileId}</TableCell>
+                    <TableCell className="text-right">{s.score}</TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          )}
         </CardContent>
       </Card>
 
@@ -176,21 +177,31 @@ export default async function AdminEventPage({
         <h2 className="text-xl font-semibold">Rounds</h2>
         <div className="flex gap-3">
           <form action={generateNextRound.bind(null, id)}>
-            <Button type="submit" disabled={event.status === "completed"}>
+            <SubmitButton disabled={!canGenerateRound} pendingText="Generating…">
               Generate next round
-            </Button>
+            </SubmitButton>
           </form>
           {event.status !== "completed" && (
             <form action={completeEvent.bind(null, id)}>
-              <Button type="submit" variant="outline">
+              <SubmitButton variant="outline" pendingText="Completing…">
                 Mark completed
-              </Button>
+              </SubmitButton>
             </form>
           )}
         </div>
       </div>
+      {!canGenerateRound && event.status !== "completed" && (
+        <p className="text-muted-foreground mt-2 text-sm">
+          Register at least two players before generating a round.
+        </p>
+      )}
 
       <div className="mt-4 flex flex-col gap-6">
+        {rounds.length === 0 && (
+          <p className="text-muted-foreground text-sm">
+            No rounds yet — click &quot;Generate next round&quot; above once players are registered.
+          </p>
+        )}
         {rounds.map((round) => (
           <Card key={round.id}>
             <CardHeader>
@@ -220,6 +231,7 @@ export default async function AdminEventPage({
                               ) as PairingRow["result"];
                               await submitResult(pairing.id, id, result);
                             }}
+                            className="flex items-center gap-2"
                           >
                             <Select name="result" defaultValue={pairing.result}>
                               <SelectTrigger className="w-40">
@@ -232,9 +244,9 @@ export default async function AdminEventPage({
                                 <SelectItem value="draw">Draw</SelectItem>
                               </SelectContent>
                             </Select>
-                            <Button type="submit" size="sm" variant="ghost" className="mt-1">
+                            <SubmitButton size="sm" variant="ghost" pendingText="Saving…">
                               Save
-                            </Button>
+                            </SubmitButton>
                           </form>
                         ) : (
                           <Badge variant="secondary">Bye</Badge>

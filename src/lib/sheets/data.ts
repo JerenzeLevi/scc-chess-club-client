@@ -185,10 +185,19 @@ export async function getRegistrations(eventId: string) {
 }
 
 export async function registerPlayer(eventId: string, playerName: string) {
-  await getOrCreatePlayer(playerName);
-  const rows = await getRegistrations(eventId);
-  if (rows.some((r) => r.playerName === playerName)) return;
-  await appendRow(TABS.registrations, [...HEADERS.registrations], { eventId, playerName });
+  const [players, registrations] = await Promise.all([
+    readTab<PlayerRow>(TABS.players),
+    getRegistrations(eventId),
+  ]);
+
+  if (registrations.some((r) => r.playerName === playerName)) return;
+
+  await Promise.all([
+    players.some((p) => p.name === playerName)
+      ? Promise.resolve()
+      : appendRow(TABS.players, [...HEADERS.players], { name: playerName, rating: String(DEFAULT_RATING) }),
+    appendRow(TABS.registrations, [...HEADERS.registrations], { eventId, playerName }),
+  ]);
 }
 
 export async function unregisterPlayer(eventId: string, playerName: string) {

@@ -43,3 +43,7 @@ next-env.d.ts
 # AI agent instruction files (not part of the shipped project)
 CLAUDE.md
 AGENTS.md
+
+.vercel
+.env*
+.playwright-mcp

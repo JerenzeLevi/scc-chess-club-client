@@ -1,29 +1,10 @@
 import Link from "next/link";
+import { getAnnouncements } from "@/lib/sheets/data";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
 
-const schedule = [
-  {
-    title: "Weekly club night",
-    when: "Every Wednesday, 6:00–8:00 PM",
-    where: "Student Union, Room 204",
-    tag: "Casual",
-  },
-  {
-    title: "Ladder session",
-    when: "Every other Friday, 5:00 PM",
-    where: "Student Union, Room 204",
-    tag: "Swiss",
-  },
-  {
-    title: "Fall Open (major event)",
-    when: "TBD",
-    where: "TBD",
-    tag: "Round-robin",
-  },
-];
+export default async function SchedulePage() {
+  const announcements = await getAnnouncements();
 
-export default function SchedulePage() {
   return (
     <div className="mx-auto w-full max-w-4xl px-4 py-16">
       <h1 className="text-3xl font-semibold tracking-tight">Schedule</h1>
@@ -37,18 +18,22 @@ export default function SchedulePage() {
       </p>
 
       <div className="mt-8 flex flex-col gap-4">
-        {schedule.map((item) => (
-          <Card key={item.title}>
-            <CardHeader className="flex-row items-start justify-between space-y-0">
-              <CardTitle className="text-base">{item.title}</CardTitle>
-              <Badge variant="secondary">{item.tag}</Badge>
-            </CardHeader>
-            <CardContent className="text-muted-foreground text-sm">
-              <p>{item.when}</p>
-              <p>{item.where}</p>
-            </CardContent>
-          </Card>
-        ))}
+        {announcements.length ? (
+          announcements.map((a) => (
+            <Card key={a.id}>
+              <CardHeader>
+                <CardTitle className="text-base">{a.title}</CardTitle>
+              </CardHeader>
+              <CardContent className="text-muted-foreground text-sm">
+                {a.body}
+              </CardContent>
+            </Card>
+          ))
+        ) : (
+          <p className="text-muted-foreground text-sm">
+            No announcements posted yet — check back soon.
+          </p>
+        )}
       </div>
     </div>
   );
