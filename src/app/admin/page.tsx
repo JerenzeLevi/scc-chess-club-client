@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { getCurrentProfile } from "@/lib/auth";
-import { createClient } from "@/lib/supabase/server";
+import { getEvents } from "@/lib/sheets/data";
 import { createEvent } from "@/app/actions/tournaments";
 import { Button } from "@/components/ui/button";
 import {
@@ -29,14 +29,10 @@ export default async function AdminPage({
   searchParams: Promise<{ error?: string }>;
 }) {
   const profile = await getCurrentProfile();
-  if (!profile || profile.role !== "admin") redirect("/login");
+  if (!profile) redirect("/login");
 
   const { error } = await searchParams;
-  const supabase = await createClient();
-  const { data: events } = await supabase
-    .from("events")
-    .select("*")
-    .order("event_date", { ascending: false });
+  const events = await getEvents();
 
   return (
     <div className="mx-auto w-full max-w-4xl px-4 py-16">
@@ -47,9 +43,19 @@ export default async function AdminPage({
             Create events and manage tournaments.
           </p>
         </div>
-        <Link href="/admin/officers">
-          <Button variant="outline">Manage officers</Button>
-        </Link>
+        <div className="flex gap-2">
+          <Link href="/admin/announcements">
+            <Button variant="outline">Announcements</Button>
+          </Link>
+          <Link href="/admin/officers">
+            <Button variant="outline">Manage officers</Button>
+          </Link>
+          {profile.role === "superadmin" && (
+            <Link href="/admin/admins">
+              <Button variant="outline">Manage admins</Button>
+            </Link>
+          )}
+        </div>
       </div>
 
       {error && (
@@ -97,14 +103,14 @@ export default async function AdminPage({
 
       <h2 className="mt-12 text-xl font-semibold">Events</h2>
       <div className="mt-4 flex flex-col gap-3">
-        {events?.length ? (
+        {events.length ? (
           events.map((event) => (
             <Link key={event.id} href={`/admin/events/${event.id}`}>
               <Card className="hover:border-foreground/30 transition-colors">
                 <CardHeader className="flex-row items-center justify-between space-y-0">
                   <div>
                     <CardTitle className="text-base">{event.name}</CardTitle>
-                    <CardDescription>{event.event_date}</CardDescription>
+                    <CardDescription>{event.eventDate}</CardDescription>
                   </div>
                   <div className="flex gap-2">
                     <Badge variant="outline">

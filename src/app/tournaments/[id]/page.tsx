@@ -1,8 +1,9 @@
 import { redirect } from "next/navigation";
-import { createClient } from "@/lib/supabase/server";
+import { getEvent, getRegistrations, getRounds, getPairingsForEvent } from "@/lib/sheets/data";
 import { computeStandings } from "@/lib/pairing/standings";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import {
   Table,
   TableBody,
@@ -11,7 +12,6 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import type { PairingResult } from "@/lib/supabase/types";
 
 export default async function TournamentDetailPage({
   params,
@@ -19,48 +19,24 @@ export default async function TournamentDetailPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
-  const supabase = await createClient();
 
-  const { data: event } = await supabase.from("events").select("*").eq("id", id).single();
+  const event = await getEvent(id);
   if (!event) redirect("/tournaments");
 
-  const { data: registrationsRaw } = await supabase
-    .from("event_registrations")
-    .select("profiles(id, full_name)")
-    .eq("event_id", id);
+  const registrations = await getRegistrations(id);
+  const players = registrations.map((r) => r.playerName);
 
-  const registrations = registrationsRaw as unknown as {
-    profiles: { id: string; full_name: string };
-  }[];
+  const rounds = await getRounds(id);
+  const pairings = await getPairingsForEvent(id);
+  const pairingsByRound = new Map(rounds.map((r) => [r.id, pairings.filter((p) => p.roundId === r.id)]));
 
-  const players = (registrations ?? []).map((r) => r.profiles);
-  const nameById = new Map(players.map((p) => [p.id, p.full_name]));
-
-  const { data: roundsRaw } = await supabase
-    .from("rounds")
-    .select("id, round_number, pairings(id, white_id, black_id, result)")
-    .eq("event_id", id)
-    .order("round_number", { ascending: true });
-
-  const rounds = roundsRaw as unknown as {
-    id: string;
-    round_number: number;
-    pairings: {
-      id: string;
-      white_id: string | null;
-      black_id: string | null;
-      result: PairingResult;
-    }[];
-  }[];
-
-  const allPairings = (rounds ?? []).flatMap((r) => r.pairings ?? []);
   const standings = computeStandings(
-    players.map((p) => p.id),
-    allPairings.map((p) => ({
-      whiteId: p.white_id,
-      blackId: p.black_id,
-      result: p.result as PairingResult,
-    }))
+    players,
+    pairings.map((p) => ({
+      whiteId: p.whiteName,
+      blackId: p.blackName || null,
+      result: p.result,
+    })),
   );
 
   return (
@@ -69,12 +45,17 @@ export default async function TournamentDetailPage({
         <div>
           <h1 className="text-3xl font-semibold tracking-tight">{event.name}</h1>
           <p className="text-muted-foreground mt-1">
-            {event.event_date} · {event.format === "swiss" ? "Swiss" : "Round-robin"}
+            {event.eventDate} · {event.format === "swiss" ? "Swiss" : "Round-robin"}
           </p>
         </div>
-        <Badge variant={event.status === "completed" ? "default" : "secondary"}>
-          {event.status}
-        </Badge>
+        <div className="flex items-center gap-3">
+          <Badge variant={event.status === "completed" ? "default" : "secondary"}>
+            {event.status}
+          </Badge>
+          <Button asChild variant="outline" size="sm">
+            <a href={`/api/export/tournament/${id}`}>Export CSV</a>
+          </Button>
+        </div>
       </div>
 
       <Card className="mt-8">
@@ -92,7 +73,7 @@ export default async function TournamentDetailPage({
             <TableBody>
               {standings.map((s) => (
                 <TableRow key={s.profileId}>
-                  <TableCell>{nameById.get(s.profileId) ?? s.profileId}</TableCell>
+                  <TableCell>{s.profileId}</TableCell>
                   <TableCell className="text-right">{s.score}</TableCell>
                 </TableRow>
               ))}
@@ -102,10 +83,10 @@ export default async function TournamentDetailPage({
       </Card>
 
       <div className="mt-8 flex flex-col gap-6">
-        {(rounds ?? []).map((round) => (
+        {rounds.map((round) => (
           <Card key={round.id}>
             <CardHeader>
-              <CardTitle className="text-base">Round {round.round_number}</CardTitle>
+              <CardTitle className="text-base">Round {round.roundNumber}</CardTitle>
             </CardHeader>
             <CardContent>
               <Table>
@@ -117,12 +98,10 @@ export default async function TournamentDetailPage({
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {(round.pairings ?? []).map((pairing) => (
+                  {(pairingsByRound.get(round.id) ?? []).map((pairing) => (
                     <TableRow key={pairing.id}>
-                      <TableCell>{nameById.get(pairing.white_id ?? "") ?? "—"}</TableCell>
-                      <TableCell>
-                        {pairing.black_id ? nameById.get(pairing.black_id) ?? "—" : "Bye"}
-                      </TableCell>
+                      <TableCell>{pairing.whiteName || "—"}</TableCell>
+                      <TableCell>{pairing.blackName || "Bye"}</TableCell>
                       <TableCell>{pairing.result}</TableCell>
                     </TableRow>
                   ))}

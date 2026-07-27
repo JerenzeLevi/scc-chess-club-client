@@ -1,38 +1,65 @@
+"use client";
+
+import { use, useEffect, useState } from "react";
 import Link from "next/link";
-import { getCurrentProfile } from "@/lib/auth";
-import { createClient } from "@/lib/supabase/server";
-import { claimRoomSlot } from "@/app/actions/room";
+import { ref, get, update, onValue } from "firebase/database";
+import { getFirebaseDb } from "@/lib/firebase/client";
+import { getClientId } from "@/lib/play-client-id";
 import { OnlineBoard } from "@/components/chess/online-board";
 import { Button } from "@/components/ui/button";
 
-export default async function RoomPage({
+interface RoomData {
+  fen: string;
+  whiteClientId: string | null;
+  blackClientId: string | null;
+  status: string;
+}
+
+export default function RoomPage({
   params,
 }: {
   params: Promise<{ roomCode: string }>;
 }) {
-  const { roomCode } = await params;
+  const { roomCode } = use(params);
   const code = roomCode.toUpperCase();
-  const profile = await getCurrentProfile();
+  const [room, setRoom] = useState<RoomData | null | "loading">("loading");
 
-  if (!profile) {
+  useEffect(() => {
+    const db = getFirebaseDb();
+    const roomRef = ref(db, `rooms/${code}`);
+    const clientId = getClientId();
+
+    (async () => {
+      const snapshot = await get(roomRef);
+      if (!snapshot.exists()) {
+        setRoom(null);
+        return;
+      }
+      const data = snapshot.val() as RoomData;
+
+      if (data.whiteClientId !== clientId && data.blackClientId !== clientId) {
+        if (!data.whiteClientId) {
+          await update(roomRef, { whiteClientId: clientId });
+        } else if (!data.blackClientId) {
+          await update(roomRef, { blackClientId: clientId, status: "active" });
+        }
+      }
+    })();
+
+    const unsubscribe = onValue(roomRef, (snapshot) => {
+      setRoom(snapshot.exists() ? (snapshot.val() as RoomData) : null);
+    });
+
+    return () => unsubscribe();
+  }, [code]);
+
+  if (room === "loading") {
     return (
       <div className="mx-auto w-full max-w-md px-4 py-16 text-center">
-        <p className="text-muted-foreground">Sign in to join this room.</p>
-        <Button asChild className="mt-4">
-          <Link href="/login">Sign in</Link>
-        </Button>
+        <p className="text-muted-foreground">Loading room…</p>
       </div>
     );
   }
-
-  await claimRoomSlot(code);
-
-  const supabase = await createClient();
-  const { data: room } = await supabase
-    .from("game_rooms")
-    .select("*")
-    .eq("room_code", code)
-    .single();
 
   if (!room) {
     return (
@@ -47,10 +74,11 @@ export default async function RoomPage({
     );
   }
 
+  const clientId = getClientId();
   const playerColor =
-    room.white_id === profile.id
+    room.whiteClientId === clientId
       ? "white"
-      : room.black_id === profile.id
+      : room.blackClientId === clientId
         ? "black"
         : "spectator";
 
@@ -64,10 +92,9 @@ export default async function RoomPage({
       <div className="mt-8">
         <OnlineBoard
           roomCode={code}
-          roomId={room.id}
           initialFen={room.fen}
           playerColor={playerColor}
-          hasBothPlayers={Boolean(room.white_id && room.black_id)}
+          hasBothPlayers={Boolean(room.whiteClientId && room.blackClientId)}
         />
       </div>
     </div>

@@ -3,34 +3,26 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Chess, type Square } from "chess.js";
 import { Chessboard } from "react-chessboard";
-import { createClient } from "@/lib/supabase/client";
+import { ref, onValue, update } from "firebase/database";
+import { getFirebaseDb } from "@/lib/firebase/client";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { computeSquareStyles } from "./board-highlights";
 
 interface OnlineBoardProps {
   roomCode: string;
-  roomId: string;
   initialFen: string;
   playerColor: "white" | "black" | "spectator";
   hasBothPlayers: boolean;
 }
 
-type MoveBroadcast = {
-  from: string;
-  to: string;
-  promotion?: string;
-  fen: string;
-};
-
 export function OnlineBoard({
   roomCode,
-  roomId,
   initialFen,
   playerColor,
   hasBothPlayers,
 }: OnlineBoardProps) {
-  const supabase = useMemo(() => createClient(), []);
+  const db = useMemo(() => getFirebaseDb(), []);
   const startFen = initialFen === "start" ? new Chess().fen() : initialFen;
   const gameRef = useRef(new Chess(startFen));
   const [fen, setFen] = useState(startFen);
@@ -40,29 +32,19 @@ export function OnlineBoard({
   );
 
   useEffect(() => {
-    const channel = supabase
-      .channel(`room:${roomCode}`)
-      .on("broadcast", { event: "move" }, ({ payload }) => {
-        const move = payload as MoveBroadcast;
-        try {
-          gameRef.current.move({
-            from: move.from,
-            to: move.to,
-            promotion: move.promotion ?? "q",
-          });
-          setFen(gameRef.current.fen());
-          setLastMove({ from: move.from as Square, to: move.to as Square });
-          setSelectedSquare(null);
-        } catch {
-          // Out-of-sync move — the fen field on game_rooms remains the source of truth.
-        }
-      })
-      .subscribe();
+    const fenRef = ref(db, `rooms/${roomCode}/fen`);
+    const unsubscribe = onValue(fenRef, (snapshot) => {
+      const remoteFen = snapshot.val() as string | null;
+      if (!remoteFen || remoteFen === "start") return;
+      if (remoteFen === gameRef.current.fen()) return;
 
-    return () => {
-      supabase.removeChannel(channel);
-    };
-  }, [roomCode, supabase]);
+      gameRef.current = new Chess(remoteFen);
+      setFen(remoteFen);
+      setSelectedSquare(null);
+    });
+
+    return () => unsubscribe();
+  }, [roomCode, db]);
 
   const status = useMemo(() => {
     const game = new Chess(fen);
@@ -94,13 +76,7 @@ export function OnlineBoard({
       setLastMove({ from, to });
       setSelectedSquare(null);
 
-      supabase.channel(`room:${roomCode}`).send({
-        type: "broadcast",
-        event: "move",
-        payload: { from, to, promotion: "q", fen: newFen },
-      });
-
-      supabase.from("game_rooms").update({ fen: newFen }).eq("id", roomId).then();
+      update(ref(db, `rooms/${roomCode}`), { fen: newFen });
 
       return true;
     } catch {

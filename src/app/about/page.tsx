@@ -1,13 +1,9 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { createClient } from "@/lib/supabase/server";
+import { getOfficers } from "@/lib/sheets/data";
 
 export default async function AboutPage() {
-  const supabase = await createClient();
-  const { data: officers } = await supabase
-    .from("officers")
-    .select("*")
-    .order("sort_order", { ascending: true });
+  const officers = await getOfficers();
 
   return (
     <div className="mx-auto w-full max-w-4xl px-4 py-16">
@@ -21,11 +17,11 @@ export default async function AboutPage() {
 
       <h2 className="mt-12 text-xl font-semibold">Officers</h2>
       <div className="mt-4 grid gap-4 sm:grid-cols-2">
-        {officers?.map((officer) => (
+        {officers.map((officer) => (
           <Card key={officer.id}>
             <CardHeader className="flex-row items-center gap-4 space-y-0">
               <Avatar className="size-12">
-                <AvatarImage src={officer.photo_url ?? undefined} alt="" />
+                <AvatarImage src={officer.photoUrl || undefined} alt="" />
                 <AvatarFallback>
                   {officer.role.slice(0, 2).toUpperCase()}
                 </AvatarFallback>
@@ -33,7 +29,7 @@ export default async function AboutPage() {
               <CardTitle className="text-base">{officer.role}</CardTitle>
             </CardHeader>
             <CardContent className="text-muted-foreground text-sm">
-              {officer.name ?? "TBD"}
+              {officer.name || "TBD"}
             </CardContent>
           </Card>
         ))}

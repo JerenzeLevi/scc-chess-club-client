@@ -1,3 +1,5 @@
+export type PairingResult = "pending" | "white" | "black" | "draw";
+
 export interface Player {
   id: string;
   score: number;

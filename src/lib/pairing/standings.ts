@@ -1,4 +1,4 @@
-import type { PairingResult } from "@/lib/supabase/types";
+import type { PairingResult } from "@/lib/pairing/types";
 
 export interface StandingsPairing {
   whiteId: string | null;

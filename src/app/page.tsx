@@ -2,6 +2,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { getAnnouncements } from "@/lib/sheets/data";
 
 const features = [
   {
@@ -27,7 +28,9 @@ const features = [
   },
 ];
 
-export default function Home() {
+export default async function Home() {
+  const announcements = (await getAnnouncements()).slice(0, 3);
+
   return (
     <div className="flex flex-1 flex-col">
       <section className="border-border border-b">
@@ -49,7 +52,7 @@ export default function Home() {
           </p>
           <div className="flex gap-3">
             <Button asChild size="lg">
-              <Link href="/join">Join the club</Link>
+              <Link href="/about">About the club</Link>
             </Button>
             <Button asChild variant="outline" size="lg">
               <Link href="/schedule">See the schedule</Link>
@@ -57,6 +60,24 @@ export default function Home() {
           </div>
         </div>
       </section>
+
+      {announcements.length > 0 && (
+        <section className="mx-auto w-full max-w-6xl px-4 py-12">
+          <h2 className="text-xl font-semibold">Announcements</h2>
+          <div className="mt-4 grid gap-4 md:grid-cols-3">
+            {announcements.map((a) => (
+              <Card key={a.id}>
+                <CardHeader>
+                  <CardTitle className="text-base">{a.title}</CardTitle>
+                </CardHeader>
+                <CardContent className="text-muted-foreground text-sm">
+                  {a.body}
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        </section>
+      )}
 
       <section className="mx-auto grid w-full max-w-6xl gap-6 px-4 py-16 md:grid-cols-3">
         {features.map((feature) => (

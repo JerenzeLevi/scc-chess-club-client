@@ -45,11 +45,9 @@ export async function Navbar() {
         <div className="flex items-center gap-3">
           {profile ? (
             <>
-              {profile.role === "admin" && (
-                <Button asChild variant="secondary" size="sm">
-                  <Link href="/admin">Admin</Link>
-                </Button>
-              )}
+              <Button asChild variant="secondary" size="sm">
+                <Link href="/admin">Admin</Link>
+              </Button>
               <form action={signOut}>
                 <Button variant="ghost" size="sm" type="submit">
                   Sign out
@@ -57,14 +55,9 @@ export async function Navbar() {
               </form>
             </>
           ) : (
-            <>
-              <Button asChild variant="ghost" size="sm">
-                <Link href="/login">Sign in</Link>
-              </Button>
-              <Button asChild size="sm">
-                <Link href="/join">Join</Link>
-              </Button>
-            </>
+            <Button asChild variant="ghost" size="sm">
+              <Link href="/login">Admin sign in</Link>
+            </Button>
           )}
         </div>
       </div>

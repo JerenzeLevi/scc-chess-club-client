@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { getCurrentProfile } from "@/lib/auth";
-import { createClient } from "@/lib/supabase/server";
+import { getOfficers } from "@/lib/sheets/data";
 import { addOfficer, updateOfficer, removeOfficer } from "@/app/actions/officers";
 import { Button } from "@/components/ui/button";
 import {
@@ -22,14 +22,10 @@ export default async function AdminOfficersPage({
   searchParams: Promise<{ error?: string }>;
 }) {
   const profile = await getCurrentProfile();
-  if (!profile || profile.role !== "admin") redirect("/login");
+  if (!profile) redirect("/login");
 
   const { error } = await searchParams;
-  const supabase = await createClient();
-  const { data: officers } = await supabase
-    .from("officers")
-    .select("*")
-    .order("sort_order", { ascending: true });
+  const officers = await getOfficers();
 
   return (
     <div className="mx-auto w-full max-w-4xl px-4 py-16">
@@ -53,7 +49,7 @@ export default async function AdminOfficersPage({
       )}
 
       <div className="mt-8 flex flex-col gap-4">
-        {officers?.map((officer) => (
+        {officers.map((officer) => (
           <Card key={officer.id}>
             <CardHeader>
               <CardTitle className="text-base">
@@ -61,13 +57,10 @@ export default async function AdminOfficersPage({
                 {officer.name ? ` — ${officer.name}` : ""}
               </CardTitle>
             </CardHeader>
-            <form
-              action={updateOfficer.bind(null, officer.id)}
-              encType="multipart/form-data"
-            >
+            <form action={updateOfficer.bind(null, officer.id)}>
               <CardContent className="flex flex-col gap-4 sm:flex-row sm:items-end">
                 <Avatar className="size-16 shrink-0">
-                  <AvatarImage src={officer.photo_url ?? undefined} alt="" />
+                  <AvatarImage src={officer.photoUrl || undefined} alt="" />
                   <AvatarFallback>
                     {officer.role.slice(0, 2).toUpperCase()}
                   </AvatarFallback>
@@ -88,19 +81,20 @@ export default async function AdminOfficersPage({
                     <Input
                       id={`name-${officer.id}`}
                       name="name"
-                      defaultValue={officer.name ?? ""}
+                      defaultValue={officer.name || ""}
                       placeholder="TBD"
                     />
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor={`photo-${officer.id}`}>
-                      Photo (1:1)
+                      Photo URL (1:1)
                     </Label>
                     <Input
                       id={`photo-${officer.id}`}
-                      name="photo"
-                      type="file"
-                      accept="image/*"
+                      name="photoUrl"
+                      type="url"
+                      defaultValue={officer.photoUrl || ""}
+                      placeholder="https://..."
                     />
                   </div>
                 </div>
