@@ -25,10 +25,41 @@ function getSheetsApi() {
   return google.sheets({ version: "v4", auth: getAuth() });
 }
 
+const ensuredTabs = new Set<string>();
+
+/**
+ * Lazily creates a tab if it doesn't already exist. Cached per-process so this
+ * only costs an extra API call the first time each tab is touched — avoids
+ * "Unable to parse range" errors when the spreadsheet predates a newer tab
+ * (e.g. Rounds/Pairings) that was never manually added.
+ */
+async function ensureTab(tabName: string): Promise<void> {
+  if (ensuredTabs.has(tabName)) return;
+
+  const sheets = getSheetsApi();
+  const spreadsheetId = getSpreadsheetId();
+  const meta = await sheets.spreadsheets.get({ spreadsheetId });
+  const existing = new Set(
+    (meta.data.sheets ?? []).map((s) => s.properties?.title).filter(Boolean),
+  );
+
+  if (!existing.has(tabName)) {
+    await sheets.spreadsheets.batchUpdate({
+      spreadsheetId,
+      requestBody: {
+        requests: [{ addSheet: { properties: { title: tabName } } }],
+      },
+    });
+  }
+
+  ensuredTabs.add(tabName);
+}
+
 /** Reads all rows from a tab, returning objects keyed by the header row. */
 export async function readTab<T extends Record<string, string>>(
   tabName: string,
 ): Promise<T[]> {
+  await ensureTab(tabName);
   const sheets = getSheetsApi();
   const res = await sheets.spreadsheets.values.get({
     spreadsheetId: getSpreadsheetId(),
@@ -54,6 +85,7 @@ export async function appendRow(
   header: string[],
   row: Record<string, string | number>,
 ): Promise<void> {
+  await ensureTab(tabName);
   const sheets = getSheetsApi();
   const values = [header.map((col) => String(row[col] ?? ""))];
 
@@ -71,6 +103,7 @@ export async function writeTab(
   header: string[],
   rows: Record<string, string | number>[],
 ): Promise<void> {
+  await ensureTab(tabName);
   const sheets = getSheetsApi();
   const values = [
     header,

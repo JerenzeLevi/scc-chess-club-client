@@ -21,9 +21,14 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
     },
     async jwt({ token }) {
       if (token.email) {
-        const admins = await readTab<AdminRow>(TABS.admins);
-        const admin = admins.find((a) => a.email.toLowerCase() === token.email!.toLowerCase());
-        token.role = admin?.role ?? null;
+        try {
+          const admins = await readTab<AdminRow>(TABS.admins);
+          const admin = admins.find((a) => a.email.toLowerCase() === token.email!.toLowerCase());
+          token.role = admin?.role ?? null;
+        } catch {
+          // Transient Sheets API hiccup — keep the previously-resolved role
+          // instead of throwing, which would otherwise sign the admin out.
+        }
       }
       return token;
     },

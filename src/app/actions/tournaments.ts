@@ -96,34 +96,47 @@ export async function generateNextRound(eventId: string) {
 
   let newPairings: { whiteId: string; blackId: string | null }[];
 
-  if (event.format === "round_robin") {
-    newPairings = generateRoundRobinRound(players, nextRoundNumber);
-  } else {
-    const standings = computeStandings(
-      players.map((p) => p.id),
-      allPairingsCamel,
-    );
-    const scoreById = new Map(standings.map((s) => [s.profileId, s.score]));
-    const scoredPlayers = players.map((p) => ({
-      ...p,
-      score: scoreById.get(p.id) ?? 0,
-    }));
-    newPairings = generateSwissPairings(
-      scoredPlayers,
-      allPairingsCamel
-        .filter((p) => p.whiteId)
-        .map((p) => ({ whiteId: p.whiteId as string, blackId: p.blackId })),
-    );
-  }
+  try {
+    if (event.format === "round_robin") {
+      newPairings = generateRoundRobinRound(players, nextRoundNumber);
+    } else {
+      const standings = computeStandings(
+        players.map((p) => p.id),
+        allPairingsCamel,
+      );
+      const scoreById = new Map(standings.map((s) => [s.profileId, s.score]));
+      const scoredPlayers = players.map((p) => ({
+        ...p,
+        score: scoreById.get(p.id) ?? 0,
+      }));
+      newPairings = generateSwissPairings(
+        scoredPlayers,
+        allPairingsCamel
+          .filter((p) => p.whiteId)
+          .map((p) => ({ whiteId: p.whiteId as string, blackId: p.blackId })),
+      );
+    }
 
-  await data.createRoundWithPairings(
-    eventId,
-    nextRoundNumber,
-    newPairings.map((p) => ({ whiteName: p.whiteId, blackName: p.blackId })),
-  );
+    if (newPairings.length === 0) {
+      redirect(
+        `/admin/events/${eventId}?error=${encodeURIComponent("No more rounds to generate — every player has already faced each other.")}`,
+      );
+    }
 
-  if (event.status === "draft") {
-    await data.setEventStatus(eventId, "active");
+    await data.createRoundWithPairings(
+      eventId,
+      nextRoundNumber,
+      newPairings.map((p) => ({ whiteName: p.whiteId, blackName: p.blackId })),
+    );
+
+    if (event.status === "draft") {
+      await data.setEventStatus(eventId, "active");
+    }
+  } catch (err) {
+    const digest = (err as { digest?: string })?.digest;
+    if (typeof digest === "string" && digest.startsWith("NEXT_REDIRECT")) throw err;
+    const message = err instanceof Error ? err.message : "Failed to generate round";
+    redirect(`/admin/events/${eventId}?error=${encodeURIComponent(message)}`);
   }
 
   revalidatePath(`/admin/events/${eventId}`);
@@ -183,4 +196,11 @@ export async function completeEvent(eventId: string) {
   await data.setEventStatus(eventId, "completed");
   revalidatePath(`/admin/events/${eventId}`);
   revalidatePath(`/tournaments/${eventId}`);
+}
+
+export async function deleteEvent(eventId: string) {
+  await requireAdmin();
+  await data.deleteEvent(eventId);
+  revalidatePath("/admin");
+  revalidatePath("/tournaments");
 }

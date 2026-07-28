@@ -2,9 +2,10 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { getCurrentProfile } from "@/lib/auth";
 import { getEvents } from "@/lib/sheets/data";
-import { createEvent } from "@/app/actions/tournaments";
+import { createEvent, deleteEvent } from "@/app/actions/tournaments";
 import { Button } from "@/components/ui/button";
 import { SubmitButton } from "@/components/submit-button";
+import { DeleteEventButton } from "@/components/delete-event-button";
 import {
   Card,
   CardContent,
@@ -106,28 +107,33 @@ export default async function AdminPage({
       <div className="mt-4 flex flex-col gap-3">
         {events.length ? (
           events.map((event) => (
-            <Link key={event.id} href={`/admin/events/${event.id}`}>
-              <Card className="hover:border-foreground/30 transition-colors">
-                <CardHeader className="flex-row items-center justify-between space-y-0">
-                  <div>
-                    <CardTitle className="text-base">{event.name}</CardTitle>
-                    <CardDescription>{event.eventDate}</CardDescription>
-                  </div>
-                  <div className="flex gap-2">
-                    <Badge variant="outline">
-                      {event.format === "swiss" ? "Swiss" : "Round-robin"}
-                    </Badge>
-                    <Badge
-                      variant={
-                        event.status === "completed" ? "default" : "secondary"
-                      }
-                    >
-                      {event.status}
-                    </Badge>
-                  </div>
-                </CardHeader>
-              </Card>
-            </Link>
+            <Card key={event.id} className="hover:border-foreground/30 transition-colors">
+              <CardHeader className="flex-row items-center justify-between space-y-0">
+                <Link
+                  href={`/admin/events/${event.id}`}
+                  className="flex-1 min-w-0"
+                >
+                  <CardTitle className="text-base">{event.name}</CardTitle>
+                  <CardDescription>{event.eventDate}</CardDescription>
+                </Link>
+                <div className="flex items-center gap-2">
+                  <Badge variant="outline">
+                    {event.format === "swiss" ? "Swiss" : "Round-robin"}
+                  </Badge>
+                  <Badge
+                    variant={
+                      event.status === "completed" ? "default" : "secondary"
+                    }
+                  >
+                    {event.status}
+                  </Badge>
+                  <DeleteEventButton
+                    action={deleteEvent.bind(null, event.id)}
+                    eventName={event.name}
+                  />
+                </div>
+              </CardHeader>
+            </Card>
           ))
         ) : (
           <p className="text-muted-foreground text-sm">No events yet.</p>

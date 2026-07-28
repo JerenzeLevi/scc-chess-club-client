@@ -177,6 +177,37 @@ export async function setEventStatus(id: string, status: EventRow["status"]) {
   await updateRow(TABS.events, [...HEADERS.events], index, { ...rows[index], status });
 }
 
+/** Deletes an event and all of its registrations, rounds, and pairings. */
+export async function deleteEvent(id: string) {
+  const events = await readTab<EventRow>(TABS.events);
+  await writeTab(
+    TABS.events,
+    [...HEADERS.events],
+    events.filter((r) => r.id !== id),
+  );
+
+  const registrations = await readTab<RegistrationRow>(TABS.registrations);
+  await writeTab(
+    TABS.registrations,
+    [...HEADERS.registrations],
+    registrations.filter((r) => r.eventId !== id),
+  );
+
+  const rounds = await readTab<RoundRow>(TABS.rounds);
+  await writeTab(
+    TABS.rounds,
+    [...HEADERS.rounds],
+    rounds.filter((r) => r.eventId !== id),
+  );
+
+  const pairings = await readTab<PairingRow>(TABS.pairings);
+  await writeTab(
+    TABS.pairings,
+    [...HEADERS.pairings],
+    pairings.filter((r) => r.eventId !== id),
+  );
+}
+
 // ---------- Registrations ----------
 
 export async function getRegistrations(eventId: string) {
